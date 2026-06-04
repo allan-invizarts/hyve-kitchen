@@ -1,0 +1,2 @@
+# No runtime pip dependencies required; uses Python standard library urllib/json.
+# If you prefer requests, add: requests

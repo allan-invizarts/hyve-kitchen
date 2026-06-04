@@ -1,0 +1,24 @@
+services:
+  postgres-test:
+    # Use the correct official tag format here
+    image: pgvector/pgvector:pg16
+    container_name: pg_test_db
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_db
+      # --- THE TOGGLE ---
+      WIPE_DATA: "true"
+      PGDATA: /var/lib/postgresql/data/pgdata_${WIPE_DATA:-default}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_test_data:

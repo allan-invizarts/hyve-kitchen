@@ -1,0 +1,1269 @@
+Hyve Kiosk Concierge
+
+API Script Factory — Phase 2 Architecture & Roadmap
+
+Prepared for: Jason, Tyler, Allan  |  Invisarts LLC  |  June 2026
+
+Revision: Phase 2 v2 — includes Tier 3.5 (Data Normalization Layer), Tiers 5 & 6, Redis caching architecture, June 13 demo plan, and parallel work breakdown.
+
+The Use Case
+
+A customer walks up to the kiosk. Their face is scanned and matched to their Odoo record. From that moment, the AI concierge has everything a seasoned salesperson would know — purchase history, open orders, loyalty status, outstanding issues — and can have a fully informed, natural conversation to assist, upsell, and serve them.
+
+Phase 1 delivered the fundamental Odoo CRUD patterns — 17 scripts covering leads, orders, invoices, inventory, and events. Phase 2 is about making the concierge genuinely intelligent: composite queries, cross-system analytics, and the ability to take meaningful action in real time. The centerpiece of Phase 2 is the Tier 3.5 Data Normalization Layer — the middleware that makes the concierge platform-agnostic and analytics-ready.
+
+The Core Interaction Loop
+
+1
+
+Face Scan
+
+Customer approaches kiosk
+
+2
+
+Identity Resolution
+
+Face hash matched to CRM / Contacts record
+
+3
+
+Context Load
+
+360 profile assembled: history, orders, loyalty, issues
+
+4
+
+Conversation
+
+AI concierge answers questions, makes recommendations
+
+5
+
+Action
+
+Quote, reservation, ticket, follow-up — taken in real time
+
+6
+
+Interaction Log
+
+Session recorded; feeds future context for next visit
+
+Every script in this document maps to one or more stages in this loop. Tier 3.5 is what makes Stage 3 (Context Load) scalable across data sources — it is the bridge between raw API data and the concierge's reasoning layer.
+
+Architecture Overview — Seven-Tier Model
+
+The script library is organized into seven tiers, each with a distinct role and dependency profile. Tier 3.5 is the structural inflection point: tiers above it are data-source-agnostic; tiers below it are source-specific. This is intentional design.
+
+Tier
+
+Name
+
+Data Source
+
+Recipe Prefix Pattern
+
+Color
+
+Tier 1
+
+Identity & Context
+
+Odoo CRM + Face ID
+
+get_*, register_*
+
+■ 1565C0
+
+Tier 2
+
+Product & Inventory
+
+Odoo Products + Stock
+
+get_product_*, search_*
+
+■ 2E7D32
+
+Tier 3
+
+Actions
+
+Odoo CRM / Sales / Helpdesk
+
+create_*, apply_*, update_*
+
+■ E65100
+
+Tier 3.5
+
+Normalization Layer ★
+
+ANY source system
+
+normalize_*
+
+■ 6A1B9A
+
+Tier 4
+
+Cross-Functional Analysis
+
+Common Data Model
+
+analyze_*
+
+■ 283593
+
+Tier 5
+
+Predictive Analytics
+
+Common Data Model + ML
+
+predict_*, recommend_*
+
+■ 880E4F
+
+Tier 6
+
+Self-Correcting Models
+
+CDM + Historical State
+
+backtest_*, calibrate_*
+
+■ B71C1C
+
+Key principle: Tiers 1–3 know about Odoo (or Salesforce, or whatever source). Tier 3.5 is the translator. Tiers 4–6 know nothing about Odoo — they consume the Common Data Model only. This means Tier 4–6 scripts never need to be rewritten when you add a new data source. Add a new Tier 3.5 normalizer, and the entire analytics stack benefits automatically.
+
+TIER 1 — Identity & Context  (runs on every visit)
+
+Data source: Odoo CRM + Hyve Face ID • Recipe prefix: get_*, register_*
+
+These are the entry-point scripts. They fire the moment a face is recognized and establish everything the concierge needs to begin a conversation. Without these, nothing else works.
+
+Script
+
+Module(s)
+
+What it does for the concierge
+
+get_customer_by_faceid
+
+CRM + Contacts
+
+Face hash to full customer record. The single entry point for every session.
+
+get_customer_profile_360
+
+CRM + Sales + Invoice + Helpdesk
+
+Composite one-call snapshot: who they are, what they've bought, what they owe, any open issues. Loads the concierge's brain.
+
+get_customer_purchase_history
+
+Sales / POS
+
+Last N orders with product detail and spend level. Tells the AI what this customer likes.
+
+get_customer_open_orders
+
+Sales
+
+Any pending quotes or orders not yet fulfilled — enables 'your order is still processing' moments.
+
+get_customer_loyalty_status
+
+Loyalty
+
+Points balance, tier, and available rewards. Personalizes the greeting and offer framing.
+
+register_new_customer
+
+CRM + Contacts
+
+For unrecognized faces — creates the CRM record and attaches the face hash. Turns a stranger into a known customer.
+
+TIER 2 — Product & Inventory  (runs during conversation)
+
+Data source: Odoo Products + Inventory • Recipe prefix: get_product_*, search_*
+
+These scripts answer the questions a customer actually asks in a store. They need to be fast and accurate — the concierge is mid-conversation when it calls them.
+
+Script
+
+Module(s)
+
+What it does for the concierge
+
+get_product_availability
+
+Inventory
+
+Is this item in stock right now, how many units, which location in the store.
+
+get_product_details
+
+Products
+
+Specs, pricing, variants. Answers 'tell me about this product.'
+
+get_active_promotions_for_customer
+
+Pricelists + Loyalty
+
+What discounts or offers apply to this specific customer right now. Enables personalized pricing.
+
+get_product_alternatives
+
+Products + Inventory
+
+Out of stock? Returns similar items that are available. Prevents lost sales.
+
+get_product_bundle_suggestions
+
+Products + Sales History
+
+Cross-sell: what do customers commonly buy together with this item.
+
+search_products_by_attribute
+
+Products
+
+Advanced filter by category, price range, or feature set. Handles open-ended 'do you have anything like...' questions.
+
+TIER 3 — Actions the Concierge Can Take  (write operations)
+
+Data source: Odoo CRM / Sales / Helpdesk / Loyalty • Recipe prefix: create_*, apply_*, update_*
+
+The concierge isn't just a lookup terminal — it can act. These scripts let the AI do things on behalf of the customer in real time, the same way a salesperson would.
+
+Script
+
+Module(s)
+
+What it does for the concierge
+
+create_quote_for_customer
+
+Sales
+
+Build and send a quote on the spot. Customer gets an email confirmation immediately.
+
+reserve_item_for_customer
+
+Inventory + Sales
+
+Hold a product so it's waiting for them. 'I'll set one aside for you.'
+
+create_followup_activity
+
+CRM + Calendar
+
+Schedule a callback, reminder, or in-store appointment.
+
+log_kiosk_interaction
+
+CRM + Kitchen Log
+
+Record what was discussed during this session. Critical for building the memory loop across visits.
+
+update_customer_preferences
+
+CRM / Contacts
+
+Capture stated preferences during the conversation for use in future visits.
+
+create_helpdesk_ticket
+
+Helpdesk
+
+Customer has a complaint or issue — log it immediately so staff can follow up.
+
+apply_loyalty_reward
+
+Loyalty
+
+Redeem points as part of a transaction. The concierge closes the loop on rewards.
+
+TIER 3.5 — Data Normalization Layer  ★ NEW
+
+Data source: ANY — Odoo, Salesforce, custom, homegrown • Recipe prefix: normalize_* • is_read_only=1 • is_chainable=1
+
+What Tier 3.5 Is
+
+Tier 3.5 is the ETL middleware of the cookbook. Each normalizer recipe calls one or more Tier 1/2 Get scripts, maps source-specific field names and data structures into a canonical Common Data Model (CDM), and returns a clean, typed Python dict or list that Tiers 4–6 can consume without knowing anything about the data source.
+
+No new tables are needed. Tier 3.5 recipes are pure Python — on-the-fly ETL inside the kitchen sandbox. They read from Tier 1/2 scripts (or from Redis cache), transform, and return. Redis caches their output so subsequent analysis calls skip the round-trip to the source system.
+
+Why This Layer Matters
+
+Platform agnostic — swap Odoo for Salesforce tomorrow, write one new normalizer, and every Tier 4–6 analytics script keeps working unchanged.
+
+LLM-optimized output — the concierge's reasoning layer gets clean, minimal, semantically consistent data. No raw API payloads, no null fields, no Odoo-specific field names like x_studio_field_abc.
+
+Redis integration point — Tier 3.5 is where caching happens. Normalized results are stored with a TTL. Tier 4–6 scripts read from cache first, making repeated analysis in a single session nearly instantaneous.
+
+Self-describing contracts — each normalizer declares its output schema as a CDM type, making recipe dependencies explicit and enabling the kitchen to validate chain integrity before execution.
+
+Foundation for the wow factor — real-time what-if analysis is only possible when the normalization step is cached. 'What if I increase safety stock by 20 units?' reruns in <200ms because only the simulation step changes, not the data pull.
+
+Dependency Chain
+
+Normalizers depend on Gets. Analyzers depend on Normalizers.
+
+Tier 1/2: get_customer_by_faceid()  →  raw Odoo crm.lead dict
+
+↓  called by
+
+Tier 3.5: normalize_customer_profile()  →  CommonCustomerProfile dict
+
+↓  called by  (from Redis cache on repeat calls)
+
+Tier 4:   analyze_spend_trend(profile, transactions)  →  SpendTrendResult
+
+↓  called by
+
+Tier 5:   predict_customer_ltv(spend_trend)  →  LTVProjection
+
+Common Data Model (CDM) — Object Definitions
+
+These are the canonical Python dict schemas that all normalizers must return and all analyzers must accept. Allan and Tyler agree on these contracts before building — they are the API between Tier 3.5 and Tier 4+.
+
+CommonCustomerProfile
+
+field
+
+type
+
+description
+
+customer_id
+
+str
+
+Canonical internal ID (e.g. odoo:lead:42 or canonical UUID)
+
+source_system
+
+str
+
+"odoo", "salesforce", "custom", etc.
+
+source_id
+
+str
+
+Native ID in the source system
+
+name
+
+str
+
+Full display name
+
+email
+
+str|None
+
+Primary email address
+
+phone
+
+str|None
+
+Primary phone number
+
+face_hash
+
+str|None
+
+Biometric hash from Hyve Eyes
+
+tags
+
+list[str]
+
+Freeform tags from source (e.g. ['vip', 'wholesale'])
+
+loyalty_tier
+
+str|None
+
+"bronze", "silver", "gold", "platinum"
+
+loyalty_points
+
+int|None
+
+Current point balance
+
+created_at
+
+str
+
+ISO 8601 datetime
+
+last_seen_at
+
+str|None
+
+ISO 8601 datetime of last recorded interaction
+
+CommonTransaction
+
+field
+
+type
+
+description
+
+transaction_id
+
+str
+
+Canonical ID
+
+source_system
+
+str
+
+Origin system
+
+source_id
+
+str
+
+Native order/POS ID
+
+customer_id
+
+str
+
+Canonical customer ID
+
+date
+
+str
+
+ISO 8601 datetime
+
+total_amount
+
+float
+
+Order total
+
+currency
+
+str
+
+ISO 4217 (e.g. 'USD')
+
+status
+
+str
+
+"draft", "confirmed", "paid", "cancelled"
+
+channel
+
+str
+
+"pos", "online", "sales_order"
+
+items
+
+list[LineItem]
+
+Line items (see LineItem below)
+
+CommonInventorySnapshot
+
+field
+
+type
+
+description
+
+product_id
+
+str
+
+Canonical product ID
+
+source_system
+
+str
+
+Origin system
+
+location_name
+
+str
+
+Human-readable warehouse / shelf location
+
+qty_available
+
+float
+
+On-hand minus reserved
+
+qty_reserved
+
+float
+
+Committed to open orders
+
+qty_on_order
+
+float
+
+Incoming purchase orders
+
+reorder_point
+
+float|None
+
+Trigger threshold for reorder recommendation
+
+as_of
+
+str
+
+ISO 8601 snapshot timestamp
+
+CommonInteractionEvent
+
+field
+
+type
+
+description
+
+event_id
+
+str
+
+Canonical event ID
+
+customer_id
+
+str
+
+Canonical customer ID
+
+timestamp
+
+str
+
+ISO 8601
+
+channel
+
+str
+
+"kiosk", "phone", "email", "web"
+
+event_type
+
+str
+
+"visit", "purchase", "inquiry", "complaint", "return"
+
+notes
+
+str|None
+
+Free-text notes from the session
+
+session_id
+
+str|None
+
+Kitchen invocation session ID if from a kiosk session
+
+source_system
+
+str
+
+Origin system
+
+CommonServiceTicket
+
+field
+
+type
+
+description
+
+ticket_id
+
+str
+
+Canonical ticket ID
+
+customer_id
+
+str
+
+Canonical customer ID
+
+subject
+
+str
+
+Ticket subject / title
+
+status
+
+str
+
+"open", "in_progress", "resolved", "closed"
+
+priority
+
+str
+
+"low", "medium", "high", "urgent"
+
+created_at
+
+str
+
+ISO 8601
+
+resolved_at
+
+str|None
+
+ISO 8601 or null if still open
+
+source_system
+
+str
+
+Origin system
+
+Tier 3.5 Normalizer Scripts
+
+Script
+
+Calls (Tier 1/2)
+
+CDM Output
+
+Cache TTL
+
+normalize_customer_profile
+
+get_customer_by_faceid OR odoo_get_lead
+
+CommonCustomerProfile
+
+5 min
+
+normalize_transaction_history
+
+get_customer_purchase_history, get_customer_open_orders
+
+list[CommonTransaction]
+
+2 min
+
+normalize_inventory_snapshot
+
+odoo_get_inventory
+
+list[CommonInventorySnapshot]
+
+60 sec
+
+normalize_product_catalog
+
+get_product_details, search_products_by_attribute
+
+list[CommonProduct]
+
+10 min
+
+normalize_interaction_log
+
+kitchen_invocation log + CRM activity
+
+list[CommonInteractionEvent]
+
+60 sec
+
+normalize_helpdesk_tickets
+
+Odoo helpdesk.ticket fetch
+
+list[CommonServiceTicket]
+
+2 min
+
+normalize_loyalty_status
+
+get_customer_loyalty_status
+
+CommonLoyaltyStatus
+
+5 min
+
+normalize_kiosk_session
+
+normalize_customer_profile + session log
+
+CommonKioskSession
+
+30 min
+
+normalize_customer_360
+
+normalize_profile + transactions + loyalty + tickets
+
+360 bundle dict (all CDM types)
+
+2 min
+
+normalize_multi_source_transactions ★
+
+normalize_transaction_history (N systems)
+
+list[CommonTransaction] — deduplicated + merged
+
+2 min
+
+★ normalize_multi_source_transactions is Allan's first non-Odoo integration target — it will merge Odoo + Salesforce + POS transactions into one unified timeline. The upper-tier analysis scripts remain unchanged.
+
+Normalizer Recipe Conventions
+
+All normalizers: is_read_only=1, is_chainable=1 (they can be called by upper-tier chains)
+
+vars contract: source_system defaults to 'odoo'; caller can override to 'salesforce' etc.
+
+Return envelope: normalizers still return the standard {status, http_status, data, user_message, system_message} envelope — the CDM object lives in data.
+
+Cache key pattern: norm:{recipe_name}:{sha256(sorted_vars_json)[:8]} — Jason's kitchen will compute and store this automatically when cache_ttl_seconds > 0.
+
+Dependency declaration: describe depends_on in the recipe description field for now. A cookbook_recipe_dependency table is a planned schema addition (Jason's call on timing).
+
+REDIS CACHING LAYER — Architecture
+
+Redis sits between Tier 3.5 normalizers and the Tier 4–6 analyzers. The kitchen engine (Jason's domain) manages cache read/write transparently — recipe authors set cache_ttl_seconds and the engine handles the rest. The result: a customer kiosk session that runs 10 analytics scripts feels like it's running 2, because 8 of them hit cache.
+
+Cache Key Pattern
+
+TTL
+
+Invalidated By
+
+Notes
+
+norm:customer_profile:{hash}
+
+5 min
+
+Tier 3 write scripts (update_customer_preferences)
+
+Customer identity data — moderate volatility
+
+norm:transaction_history:{hash}
+
+2 min
+
+TTL only (order status changes infrequently mid-session)
+
+Sales history — low intra-session volatility
+
+norm:inventory_snapshot:{hash}
+
+60 sec
+
+reserve_item_for_customer Tier 3 write
+
+Stock levels change — short TTL essential
+
+norm:customer_360:{hash}
+
+2 min
+
+Any Tier 3 write touching this customer
+
+Composite — invalidated when any component changes
+
+norm:product_catalog:{hash}
+
+10 min
+
+TTL only
+
+Catalog rarely changes mid-session
+
+sim:inventory_delta:{session_id}
+
+session
+
+Session end / TTL
+
+Hypothetical simulation state — never persisted to Odoo
+
+Cache Invalidation Strategy
+
+Write actions: Tier 3 Action scripts (create_*, update_*, apply_*) call kitchen.cache.invalidate(key_pattern) after a successful write.
+
+Simulation: Simulation keys (sim:*) are session-scoped and never written back to the source system. They exist only for what-if analysis.
+
+Implementation: Jason wires explicit invalidation calls into cook.py — recipe authors signal intent via a declared invalidates_cache: ['key_pattern'] field in the recipe metadata.
+
+Fallback: If Redis is unavailable, the kitchen falls back to direct source calls transparently — degraded performance, not a failure.
+
+TIER 4 — Cross-Functional Analysis  (data-source agnostic)
+
+Data source: Common Data Model only • Recipe prefix: analyze_* • is_read_only=1
+
+Tier 4 scripts consume normalized CDM data exclusively. They have no knowledge of Odoo, Salesforce, or any specific system. This is where the concierge stops feeling like software and starts feeling like someone who knows the customer. These scripts are Allan's primary build target.
+
+Script
+
+CDM Inputs
+
+Output
+
+Concierge use
+
+analyze_spend_trend
+
+list[CommonTransaction]
+
+SpendTrend (weekly/monthly aggregations, delta vs prior period)
+
+Is this customer buying more or less over time? How to pitch.
+
+analyze_churn_signals
+
+CommonCustomerProfile + list[CommonTransaction] + list[CommonServiceTicket]
+
+ChurnScore (0–100, risk factors list)
+
+Last visit 6 months ago + complaint on file = retention offer trigger.
+
+analyze_inventory_gaps
+
+list[CommonInventorySnapshot] + list[CommonTransaction]
+
+GapReport (products at risk, days-to-stockout)
+
+What's going to run out before the next restock? Feeds Tier 5.
+
+analyze_customer_ltv
+
+list[CommonTransaction] + CommonLoyaltyStatus
+
+LTVProjection (annualized, trend)
+
+Is this a high-value customer the concierge should be extra attentive to?
+
+analyze_customer_segment
+
+list[CommonTransaction] (cohort)
+
+SegmentProfile (cohort spend, product affinity)
+
+'Customers like you also buy' — no ML infrastructure required.
+
+analyze_store_session_metrics
+
+list[CommonKioskSession]
+
+SessionMetrics (volume, conversion, top intents)
+
+Operational dashboard: how many sessions today, conversion rate, common questions.
+
+TIER 5 — Predictive Analytics & Recommendations  (forward-looking)
+
+Data source: Tier 4 outputs + historical CDM • Recipe prefix: predict_*, recommend_*
+
+Tier 5 takes the analysis outputs from Tier 4 and projects them forward. These scripts answer 'what will happen' rather than 'what happened.' They can also incorporate external signals (calendar events, weather, holidays) when those inputs are provided. Tier 5 is where Jason's 'how much do I order for next week?' question lives.
+
+Script
+
+Inputs
+
+Output
+
+What it enables
+
+predict_reorder_quantity
+
+GapReport + list[CommonTransaction] + external_factors dict
+
+ReorderRecommendation (product, qty, urgency, confidence)
+
+Automated purchasing suggestion. The restaurant owner's 'how much do I order?' answer.
+
+predict_customer_churn_risk
+
+ChurnScore (from T4) + LTVProjection
+
+ChurnRiskAlert (action recommended, suggested offer)
+
+Proactive retention: concierge surfaces a discount before the customer walks away for good.
+
+recommend_products_for_customer
+
+CommonCustomerProfile + list[CommonTransaction] + list[CommonProduct]
+
+ProductRecommendations (ranked, with reason)
+
+Personalized cross-sell / upsell at the kiosk — more specific than Tier 2 bundle suggestions.
+
+predict_weekly_demand
+
+list[CommonTransaction] + calendar_events + weather (optional)
+
+DemandForecast (by product, by day, confidence interval)
+
+Store manager view: staff levels, stock targets, promotional timing.
+
+simulate_inventory_change ★
+
+list[CommonInventorySnapshot] + delta_adjustments dict
+
+Modified list[CommonInventorySnapshot] (IN MEMORY — no write to source)
+
+What-if: 'What if I added 20 units of X?' Core of the June 13 demo.
+
+★ simulate_inventory_change is the critical June 13 demo recipe. It applies a hypothetical delta to a cached normalized snapshot and returns the modified state without touching Odoo. Re-running analyze_inventory_gaps on this modified state produces the projected outcome. The delta is stored in Redis under a session-scoped sim: key.
+
+TIER 6 — Self-Correcting Models & Backtesting  (the learning layer)
+
+Data source: Historical CDM + prior Tier 5 outputs • Recipe prefix: backtest_*, calibrate_*, score_*
+
+Tier 6 closes the loop. It takes past Tier 5 predictions, compares them to what actually happened, quantifies the error, and adjusts model weights or thresholds stored in cookbook_system_config. The system gets smarter over time without requiring a model retrain or a code deploy.
+
+Script
+
+Inputs
+
+Output
+
+How the system improves
+
+backtest_demand_model
+
+Historical list[CommonTransaction] + historical DemandForecast records
+
+AccuracyReport (MAPE, bias, by product/category)
+
+Quantifies how accurate prior predictions were. Used by calibrate_demand_weights.
+
+score_recommendation_accuracy
+
+Past ProductRecommendations + subsequent CommonTransaction records
+
+AccuracyScore (hit rate, avg rank of purchased item)
+
+Did the concierge's product suggestions actually convert? Feeds recommendation tuning.
+
+calibrate_model_weights
+
+AccuracyReport or AccuracyScore
+
+Updated weights dict — written to cookbook_system_config
+
+Closes the loop. Next Tier 5 call reads updated weights from config. No redeploy needed.
+
+generate_forecast_validation_report
+
+DemandForecast + actual CommonTransaction (post-period)
+
+ValidationReport (predicted vs actual, confidence calibration)
+
+Human-readable report for the store manager showing how well the forecast performed.
+
+Tier 6 represents a meaningful milestone: the system asserting predictions, measuring their accuracy, and correcting itself. This is what makes the 'restaurant owner ordering for next week' scenario genuinely impressive — the prediction improves with every cycle.
+
+Recommended Module Expansions
+
+The current script library focuses on CRM, Sales, Inventory, and Calendar. These additional modules unlock meaningful concierge capabilities and should be prioritized in Phase 2 Tier 1–3 work.
+
+Module
+
+Why it matters for the kiosk concierge
+
+Point of Sale
+
+In-store transactions are the end goal. The concierge needs POS history, not just Odoo Sales orders, to understand what customers actually buy at the register. Required for normalize_transaction_history to be complete.
+
+Loyalty / Gift Cards
+
+Central to concierge value. Rewards recognition drives return visits. Required for normalize_loyalty_status and apply_loyalty_reward.
+
+Website / eCommerce
+
+If the store has online sales, the concierge should know about online cart abandonment and wish lists — powerful conversation starters.
+
+Email Marketing
+
+What campaigns has this customer received? Did they open them? Contextualizes the conversation and avoids redundant pitches.
+
+Helpdesk
+
+Has this customer had a complaint or open support ticket? The concierge must know before engaging so it doesn't cheerfully upsell a frustrated customer.
+
+Repairs
+
+For businesses servicing products — electronics, furniture, apparel — repair history is part of the customer relationship the concierge should be aware of.
+
+★  THE JUNE 13 WOW DEMO
+
+Real-Time Impact Analysis: Get data. Run analysis. Change something. Rerun. See the difference immediately.
+
+Demo Scenario: Inventory Reorder Impact Analysis
+
+A store manager stands at the kiosk and asks: 'What would happen to our stockout risk if we increased safety stock on our top 5 sellers by 20 units each?'
+
+The concierge runs a live analysis, shows current risk, applies the hypothetical change, and shows the projected outcome — in under 3 seconds total for the repeat run.
+
+#
+
+Recipe Called
+
+What Happens
+
+1
+
+normalize_inventory_snapshot()
+
+Pulls current stock.quant data from Odoo → CommonInventorySnapshot[]. Cached in Redis on first call.
+
+2
+
+normalize_transaction_history(all, last_90_days)
+
+Pulls 90-day sales history → CommonTransaction[]. Cached in Redis.
+
+3
+
+analyze_inventory_gaps(snapshot, transactions)
+
+Computes sales velocity per product, days-to-stockout, risk scores. Returns GapReport. → BASELINE RESULT displayed.
+
+4
+
+simulate_inventory_change([top5_ids], delta=+20)
+
+Applies hypothetical +20 unit delta to the cached snapshot IN MEMORY. Stores modified snapshot in Redis under sim:{session_id}.
+
+5
+
+analyze_inventory_gaps(sim_snapshot, transactions)
+
+Reruns the exact same analysis on the modified snapshot. Transactions are already cached — this is near-instant.
+
+6
+
+(result render)
+
+Side-by-side delta: BEFORE → 3 products at critical stockout risk. AFTER → 0 products at critical risk. Manager says: 'What about +40 units?' → repeat steps 4–6 in <500ms.
+
+What Makes This Impressive
+
+Steps 1–3 run once per session and are cached. Steps 4–6 are sub-second on every what-if iteration.
+
+No data is written to Odoo during the simulation. The sim: key in Redis is session-scoped and discarded at session end.
+
+The manager can iterate freely: 'What about +40 units? What if we only do the top 2? What if we move stock from Location A to B?' Each iteration reruns in milliseconds.
+
+This is the same loop Tier 6 will use for backtesting — 'how accurate was last week's prediction?' runs against the same analyze_inventory_gaps script with historical data.
+
+This demo requires: normalize_inventory_snapshot (Tyler), normalize_transaction_history (Tyler), analyze_inventory_gaps (Allan), simulate_inventory_change (Allan), Redis integration in the kitchen engine (Jason). Five work items across three people. See Work Breakdown below.
+
+Parallel Work Breakdown — Jason / Tyler / Allan
+
+These three work streams can proceed simultaneously. Tyler defines the CDM contracts and builds the normalizers. Allan builds the analysis and simulation scripts against the CDM contracts Tyler has published. Jason wires Redis caching into the kitchen engine and prepares a demo environment with realistic data.
+
+Work Item
+
+Owner
+
+Detail / Deliverable
+
+Redis integration
+
+Jason
+
+Add Redis read/write to cook.py. Normalizers set cache_ttl_seconds; kitchen stores result under norm:{recipe_name}:{hash} key automatically. Fallback to direct call if Redis unavailable.
+
+Cache invalidation
+
+Jason
+
+After any Tier 3 write script succeeds, kitchen calls invalidate on the relevant cache key patterns declared in the recipe's invalidates_cache metadata field.
+
+cookbook_recipe_dependency (optional)
+
+Jason
+
+Add a lightweight junction table: (recipe_id, depends_on_recipe_id, dependency_type). Enables dependency graph visualization and future auto-invalidation propagation.
+
+Demo environment data
+
+Jason
+
+Ensure Odoo demo instance has: 20+ customer records with face hashes, 90+ days of transaction history, varied inventory levels including some near-stockout products.
+
+Kitchen JWT + cookbook_subscription_access
+
+Jason
+
+Grant kiosk-fleet subscription access to all Tier 3.5 normalizer recipes once Tyler inserts them. System-level grant preferred.
+
+CDM contract definition
+
+Tyler
+
+Finalize CommonCustomerProfile, CommonTransaction, CommonInventorySnapshot CDM dicts in a shared schema_types.py reference file. Allan and Tyler agree before building.
+
+normalize_customer_profile
+
+Tyler
+
+Calls get_customer_by_faceid. Maps crm.lead fields to CommonCustomerProfile. Cache TTL 5 min. INSERT SQL + Python body.
+
+normalize_transaction_history
+
+Tyler
+
+Calls get_customer_purchase_history + get_customer_open_orders. Maps sale.order to CommonTransaction[]. Cache TTL 2 min.
+
+normalize_inventory_snapshot
+
+Tyler
+
+Calls odoo_get_inventory. Maps stock.quant to CommonInventorySnapshot[]. Cache TTL 60 sec. Priority: required for June 13 demo.
+
+normalize_customer_360
+
+Tyler
+
+Orchestrates normalize_profile + transactions + loyalty + tickets into a single bundled response. The 'load the concierge's brain in one call' recipe.
+
+remaining normalizers (post-demo)
+
+Tyler
+
+normalize_product_catalog, normalize_interaction_log, normalize_helpdesk_tickets, normalize_loyalty_status, normalize_kiosk_session.
+
+analyze_inventory_gaps
+
+Allan
+
+Computes sales velocity from CommonTransaction[], calculates days-to-stockout against CommonInventorySnapshot[]. Returns GapReport. Priority: required for demo.
+
+simulate_inventory_change
+
+Allan
+
+Applies hypothetical delta_adjustments to a CommonInventorySnapshot list in memory. Stores result in Redis sim: key for the session. Returns modified list[CommonInventorySnapshot]. Priority: required for demo.
+
+analyze_spend_trend
+
+Allan
+
+Weekly/monthly aggregation of CommonTransaction[] with delta vs prior period. First Tier 4 analytics script — sets the pattern for the rest.
+
+analyze_churn_signals
+
+Allan
+
+Computes ChurnScore from profile recency, transaction gap, and open ticket count. Post-demo milestone.
+
+Tier 4–5 remaining scripts
+
+Allan
+
+analyze_customer_ltv, analyze_customer_segment, predict_reorder_quantity, recommend_products_for_customer. Builds on CDM contracts established in demo sprint.
+
+Updated Phase 2 Script Count Estimate
+
+Category
+
+Est.
+
+Notes
+
+Identity & Context (Tier 1)
+
+6
+
+Run on every session; highest priority
+
+Product & Inventory (Tier 2)
+
+6
+
+Conversational lookups; fast response required
+
+Actions (Tier 3)
+
+7
+
+Write operations; need error handling + confirm flow
+
+Normalization Layer (Tier 3.5) ★ NEW
+
+10
+
+Core: 3 for demo sprint + 7 remaining. Platform-agnostic foundation.
+
+Cross-Functional Analysis (Tier 4)
+
+6
+
+CDM-only consumers; Allan's domain
+
+Predictive Analytics (Tier 5)
+
+5
+
+Includes simulate_inventory_change for demo
+
+Self-Correcting Models (Tier 6)
+
+4
+
+Backtesting + calibration; post-demo milestone
+
+New Module Coverage (POS, Loyalty, eComm, etc.)
+
+15+
+
+Tier 1–3 expansions as modules come online
+
+Advanced Search & Filter variants
+
+10+
+
+Domain-filter specializations across all modules
+
+TOTAL
+
+69+
+
+Conservatively — grows as use cases surface
+
+The June 13 demo requires exactly 5 scripts: normalize_inventory_snapshot (Tyler), normalize_transaction_history (Tyler), analyze_inventory_gaps (Allan), simulate_inventory_change (Allan), and Redis integration (Jason). These are the critical path items.
+
+The Key Insight for Phase 2
+
+Phase 1 scripts are building blocks. Phase 2 is about the layer above them. Tier 3.5 is the structural bet: invest in normalization once, and every analytics script you write from that point forward works across any data source you add — Odoo today, Salesforce next quarter, custom POS after that.
+
+The 'wow factor' is not a single impressive script. It is a system that can answer 'what if?' questions in real time, learn from whether its answers were right, and get better without a redeploy. That is what Tiers 3.5 through 6 deliver together.
+
+Document prepared by Tyler (AIS) for Invisarts LLC. June 2026. Revision: Phase 2 v2.
