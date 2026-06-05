@@ -168,7 +168,26 @@ hyve-kitchen/
 - Python 3.9+
 - PostgreSQL client (for direct DB access; optional)
 
-### 1. Start the stack
+### 1. Create and activate a Python virtual environment
+
+```bash
+python -m venv .venv
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+# Windows cmd
+.\.venv\Scripts\activate.bat
+# macOS / Linux
+source .venv/bin/activate
+```
+
+### 2. Install Python dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 3. Start the Docker stack
 
 ```bash
 docker-compose up -d
@@ -178,20 +197,40 @@ This starts:
 - **Odoo** on `http://localhost:8069` (user: `admin`, password: `admin`)
 - **PostgreSQL** on `localhost:5432` (user: `hyve_admin`, password: `hyve_kitchen`)
 
-### 2. Install Python dependencies
+### 4. Verify the app is running
+
+Open a browser and visit:
+- `http://localhost:8069`
+
+Log in with the Odoo credentials shown above.
+
+### 5. Run the main tests
 
 ```bash
-pip install -r requirements.txt
+python tests/run_odoo_crm_crud_and_normalize.py
 ```
 
-### 3. Verify Tier 3 CRUD works
+This validates the Tier 3 and Tier 3.5 flow.
+
+### 6. Run the Tier 4 analyzer test
 
 ```bash
-cd tests
-python run_odoo_crm_crud_and_normalize.py
+python tests/test_tier4_chain.py --mode sample
 ```
 
-Expected output:
+If Odoo is available and recipe modules are importable, run the full chain:
+
+```bash
+python tests/test_tier4_chain.py --mode chain
+```
+
+### 7. Clean up test data
+
+```bash
+python tests/cleanup_crm_test_leads.py
+```
+
+Expected output for the basic verification test:
 ```
 ✓ Created lead: Allan Abendanio (ID: 42)
 ✓ Normalized to CommonCustomerProfile
