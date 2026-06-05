@@ -277,41 +277,99 @@ cdm_input_types_csv = 'CommonCustomerProfile'  -- consumes this CDM
 
 ## Running Tests
 
+### Prepare the environment
+
+1. Start the Docker stack:
+
+```bash
+docker-compose up -d
+```
+
+2. Install Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Run tests from the repo root; the `tests/` scripts assume the current working directory is the project root.
+
 ### Test Tier 3 CRUD
 
 ```bash
-cd tests
-python run_odoo_crm_crud_and_normalize.py
+python tests/run_odoo_crm_crud_and_normalize.py
 ```
 
-Tests: create lead → read → update → delete → search.
+What it does:
+- Creates a test lead in Odoo
+- Reads the lead back
+- Verifies normalization works for the raw payload
+- Confirms search behavior
 
 ### Test Tier 3.5 Normalizer
 
-```bash
-cd tests
-python run_odoo_crm_crud_and_normalize.py
-```
+The same script also validates the normalizer output.
 
-Includes normalization validation.
+```bash
+python tests/run_odoo_crm_crud_and_normalize.py
+```
 
 ### Test Tier 4 Analyzer
 
+#### Standalone sample test (no Odoo required)
+
 ```bash
-cd tests
-python test_tier4_chain.py
+python tests/test_tier4_chain.py --mode sample
 ```
 
-Tests: CRUD → normalize → analyze (full chain).
+This verifies the Tier 4 analyzer logic using a hard-coded `CommonCustomerProfile` sample.
+
+#### Full chain test (requires Odoo and valid recipe imports)
+
+```bash
+python tests/test_tier4_chain.py --mode chain
+```
+
+This exercises the full flow:
+- Tier 3 CRUD
+- Tier 3.5 normalization
+- Tier 4 analytics
+
+#### Default test mode
+
+```bash
+python tests/test_tier4_chain.py
+```
+
+This runs both the sample and full chain modes; if the local Odoo/Tier 3 modules are not available, the chain portion will skip safely.
 
 ### Clean up test data
 
 ```bash
-cd tests
-python cleanup_crm_test_leads.py
+python tests/cleanup_crm_test_leads.py
 ```
 
-Removes all test leads created during testing.
+This removes test leads created by the CRUD tests.
+
+---
+
+## Git Workflow
+
+After you make changes, use these commands to commit and push them:
+
+```bash
+git status
+git add -A
+git commit -m "<describe your changes>"
+git push origin main
+```
+
+If your branch is behind remote, run:
+
+```bash
+git pull origin main
+```
+
+Then rerun the push command.
 
 ---
 
