@@ -1,0 +1,423 @@
+Hyve Kiosk Concierge
+
+Phase 2 Analytics Recipe Author Guide
+
+For Tyler (Tier 3.5 normalizers) and Allan (Tier 4 / 5 / 6 analyzers, simulators, calibrators).
+
+Read this first
+
+This guide is the working companion to hyve_phase2_brainstorm_v2.docx. The brainstorm document explains why the tier model exists and what each layer is for. This document explains how to author a recipe that lands in the right tier, declares the right cache scope, type-checks against the CDM, and chains correctly with its dependencies.
+
+Read it once end-to-end, then keep it open while you write your first three recipes. By the third, the pattern is automatic.
+
+All Phase 2 recipes live under:
+
+hyve-blackbox/hyve-kitchen/recipes/<system>/<module>/<recipe_name>.sql
+
+with the exception of Tier 3.5 normalizers, which live under:
+
+hyve-blackbox/hyve-kitchen/recipes/_normalizers/<cdm_type>/<recipe_name>.sql
+
+because they are system-agnostic by design. A normalizer that maps Odoo crm.lead into CommonCustomerProfile lives next to one that will map Salesforce Account into the same CommonCustomerProfile, so analyzers further up the stack do not care which source produced the dict.
+
+The 30-second authoring loop
+
+Copy _templates/recipe_insert.template.sql to the right tier folder.
+
+Rename the file to <recipe_name>.sql; that string must equal cookbook_recipe.name.
+
+Fill in the 8 standard sections plus the 5 new Phase 2 fields (tier, cache_scope, invalidates_cache_csv, cdm_output_type, cdm_input_types_csv).
+
+If you depend on other recipes (almost every Tier 3.5 + Tier 4 recipe does), add one cookbook_recipe_dependency INSERT per upstream recipe.
+
+Apply to your test DB: docker exec -i hyve-postgres psql -1 -U hyve_admin -d hyve_kitchen_test < your_recipe.sql
+
+Verify with _verify/manifest.sql; the recipe should show up tagged with the right tier.
+
+If your recipe is Tier 1, 2, or 3, it appears in the LLM tool manifest automatically (PR-3). If it is Tier 3.5 or higher, it is only callable via chains and is not directly LLM-exposed.
+
+The five Phase 2 fields on cookbook_recipe
+
+PR-1 (V105 migration) adds five columns. Pick the right value for each tier; the table below is the cheat sheet.
+
+Tier
+
+tier
+
+cache_scope
+
+cdm_output_type (typical)
+
+cdm_input_types_csv (typical)
+
+T1
+
+tier1
+
+tenant
+
+(none -- raw)
+
+(none)
+
+T2
+
+tier2
+
+tenant
+
+(none -- raw)
+
+(none)
+
+T3
+
+tier3
+
+tenant
+
+(none -- raw)
+
+(none)
+
+T3.5
+
+tier3.5
+
+tenant
+
+CommonCustomerProfile / etc.
+
+(none, calls T1/T2 directly)
+
+T4
+
+tier4
+
+tenant
+
+SpendTrend / ChurnScore / etc.
+
+CommonTransaction[], CommonCustomerProfile
+
+T5
+
+tier5
+
+session
+
+DemandForecast / Modified CDM list
+
+CommonInventorySnapshot[], delta_adjustments dict
+
+T6
+
+tier6
+
+tenant
+
+AccuracyReport / AccuracyScore
+
+CommonTransaction[], DemandForecast[]
+
+invalidates_cache_csv is ONLY set on Tier 3 write recipes. List the Redis key patterns to bust after a successful write. Example: a Tier 3 update_customer_preferences should set invalidates_cache_csv to:
+
+norm:customer_profile:*,norm:customer_360:*
+
+so the next analyzer call re-fetches the changed profile instead of serving stale cache.
+
+CDM contracts -- the API between Tier 3.5 and Tier 4+
+
+Every normalizer returns one of these canonical Python dict shapes. Every analyzer consumes one or more. Tyler defines the shapes (via cookbook_cdm_type + cookbook_cdm_field rows landing in PR-1). Allan reads from /v1/cdm-types (PR-2) so the contract is always retrievable at author time.
+
+CDM types defined for the June 13 demo
+
+Type
+
+Cardinality
+
+Notes
+
+CommonCustomerProfile
+
+1
+
+Identity, contact info, loyalty status, face_hash. Source-agnostic.
+
+CommonTransaction
+
+list
+
+Order / POS line. Has nested items: list[LineItem]. Used by spend, churn, LTV.
+
+CommonInventorySnapshot
+
+list
+
+Per-product-per-location stock state. Used by gap analysis and simulation.
+
+CommonInteractionEvent
+
+list
+
+Visit, purchase, inquiry, complaint, return. Used by churn signals.
+
+CommonServiceTicket
+
+list
+
+Helpdesk ticket. Status + priority + ages. Used by churn signals.
+
+CommonLoyaltyStatus
+
+1
+
+Points balance, tier, available rewards.
+
+CommonProduct
+
+list
+
+Source-agnostic product catalog row.
+
+CommonKioskSession
+
+list
+
+Aggregated kiosk session for store-level analytics.
+
+Full field-by-field schemas are in the brainstorm doc Tables 10-14. Once PR-2 lands you can pull them at any time:
+
+curl http://hyve-kitchen:8090/v1/cdm-types
+
+Cache scope semantics
+
+'tenant' (default; T1/T2/T3 reads, T3.5/T4 standard reads)
+
+Key: kitchen:recipe:{name}:result:{sha256(args + subscription_id + character_id)}. Per-tenant isolation; one customer's analytics never leak into another's session. Cache TTL set by cache_ttl_seconds on the recipe row.
+
+'session' (T5 simulators, simulation-mode reads)
+
+Key: sim:{recipe_name}:{simulation_session_id}. The cook request body carries a simulation_session_id; cook.py reads/writes this key when the recipe's cache_scope is 'session' OR when the request explicitly forces simulation mode. Used so what-if iterations write to a session-local overlay that never touches Odoo and gets discarded at session end.
+
+'global' (rare; T2 product catalog, system-wide config)
+
+Key: norm:{recipe_name}:{sha256(args)} -- args only, shared across every session. Use this only when the cached output is truly tenant-agnostic (a public product spec, a published tax rate). Misuse is a privacy bug.
+
+Three recipe templates
+
+The full template lives in _templates/recipe_insert.template.sql. The three Phase 2 variants below show the minimum-viable Phase 2 fields for each tier.
+
+Template A -- Tier 3.5 normalizer
+
+Pulls from a Tier 1 or Tier 2 Get recipe and maps the raw payload into a CDM dict. is_read_only=1, is_chainable=1, cache_scope='tenant' (typical) or 'global' for source-agnostic catalogs.
+
+INSERT INTO cookbook_recipe (id, name, display_name, description,
+
+tier, cache_scope, cdm_output_type, cdm_input_types_csv,
+
+cache_ttl_seconds, is_read_only, is_chainable,
+
+system_id, module_id, auth_profile_id, python_body, entrypoint, ...)
+
+VALUES (generate_custom_guid('KTN'),
+
+'normalize_customer_profile',
+
+'Normalize Customer Profile (CDM)',
+
+'Maps an Odoo crm.lead to CommonCustomerProfile.',
+
+'tier3.5', 'tenant', 'CommonCustomerProfile', NULL,
+
+300, 1, 1, ...);
+
+INSERT INTO cookbook_recipe_dependency (id, recipe_id, depends_on_recipe_id, dependency_type, created_by)
+
+SELECT generate_custom_guid('DEP'),
+
+(SELECT id FROM cookbook_recipe WHERE name='normalize_customer_profile'),
+
+(SELECT id FROM cookbook_recipe WHERE name='odoo_get_lead'),
+
+'data', 'recipe-author'
+
+WHERE NOT EXISTS (...);
+
+Template B -- Tier 4 analyzer
+
+Consumes CDM lists from one or more Tier 3.5 normalizers. is_read_only=1, is_chainable=1, cache_scope='tenant'. Declare every CDM input type the recipe consumes in cdm_input_types_csv -- this is how PR-2's tool manifest tells the LLM 'this recipe needs a CommonTransaction list to run.'
+
+INSERT INTO cookbook_recipe (id, name, ..., tier, cache_scope,
+
+cdm_output_type, cdm_input_types_csv, cache_ttl_seconds, ...)
+
+VALUES (generate_custom_guid('KTN'),
+
+'analyze_spend_trend', ...,
+
+'tier4', 'tenant',
+
+'SpendTrend',
+
+'CommonTransaction',
+
+120, ...);
+
+Template C -- Tier 5 simulator
+
+Reads a CDM list from cache, applies an in-memory delta, writes the modified list back to sim:{recipe}:{session_id}. Never touches the source system. is_read_only=1 because it does not write to source; cache_scope='session' so the overlay is session-bound.
+
+INSERT INTO cookbook_recipe (id, name, ..., tier, cache_scope,
+
+cdm_output_type, cdm_input_types_csv, ...)
+
+VALUES (generate_custom_guid('KTN'),
+
+'simulate_inventory_change', ...,
+
+'tier5', 'session',
+
+'CommonInventorySnapshot',
+
+'CommonInventorySnapshot,DeltaAdjustments',
+
+...);
+
+Sample recipe: analyze_spend_trend
+
+Shipped at hyve-blackbox/hyve-kitchen/recipes/odoo/analytics/analyze_spend_trend.sql. Apply it to a V105 database, point a recipe-chain at it, and you have a working Tier 4 analyzer. Copy it as the starting point for analyze_inventory_gaps, analyze_churn_signals, and analyze_customer_ltv -- the shape is identical, only the math changes.
+
+What the sample demonstrates
+
+Every Phase 2 field set correctly (tier='tier4', cache_scope='tenant', cdm_output_type='SpendTrend', cdm_input_types_csv='CommonTransaction', cache_ttl_seconds=120, is_chainable=1).
+
+One cookbook_recipe_dependency row pointing at normalize_transaction_history (which Tyler ships in his sprint).
+
+Standard 8-section file shape (systems / modules / auth / globals / recipe + version CTE / vars / outputs / verify block).
+
+Python body that consumes a CommonTransaction list, computes weekly aggregations and a prior-period delta, returns a SpendTrend dict matching the declared cdm_output_type.
+
+Returns the standard envelope (status / http_status / data / user_message / system_message).
+
+Validates entirely in Python before touching anything -- never raises out of run().
+
+Tyler's first sprint (Tier 3.5 normalizers)
+
+All three deliverables are critical-path for the June 13 demo. Take them in order; the later ones reuse patterns from the earlier.
+
+Recipe
+
+CDM output
+
+Cache TTL
+
+What it does
+
+normalize_customer_profile
+
+CommonCustomerProfile
+
+300s (5 min)
+
+Calls odoo_get_lead. Maps crm.lead -> profile dict. Pattern reference for every other normalizer.
+
+normalize_transaction_history
+
+list[CommonTransaction]
+
+120s (2 min)
+
+Calls odoo_get_orders + odoo_get_invoices. Merges into a unified timeline. Required by analyze_spend_trend and analyze_inventory_gaps.
+
+normalize_inventory_snapshot
+
+list[CommonInventorySnapshot]
+
+60s
+
+Calls odoo_get_inventory. Maps stock.quant -> snapshot dict. Required by analyze_inventory_gaps and simulate_inventory_change. Demo-critical.
+
+Allan's first sprint (Tier 4 + Tier 5)
+
+analyze_spend_trend ships as the working sample; use it as your template for analyze_inventory_gaps (the demo-critical T4). simulate_inventory_change is the T5 simulator and the cornerstone of the June 13 demo.
+
+Recipe
+
+Tier
+
+Cache scope
+
+What it does
+
+analyze_spend_trend
+
+tier4
+
+tenant
+
+Ships as the working sample. Read it; the same shape applies to the others.
+
+analyze_inventory_gaps
+
+tier4
+
+tenant
+
+Computes sales velocity from CommonTransaction[], days-to-stockout against CommonInventorySnapshot[]. Returns GapReport. Demo-critical.
+
+simulate_inventory_change
+
+tier5
+
+session
+
+Applies delta_adjustments to a CommonInventorySnapshot list in memory, writes back to sim: under the session_id. Never touches Odoo. Demo-critical.
+
+analyze_churn_signals
+
+tier4
+
+tenant
+
+Computes ChurnScore from profile recency + transaction gap + open ticket count. Post-demo.
+
+analyze_customer_ltv
+
+tier4
+
+tenant
+
+LTV projection from CommonTransaction[] + CommonLoyaltyStatus. Post-demo.
+
+Common mistakes to avoid
+
+Tier 4 recipe declares cdm_input_types_csv but the upstream normalizer doesn't exist yet. Fix: add the cookbook_recipe_dependency row anyway; the manifest will warn until the upstream lands and that's the point.
+
+Cache TTL too long for a write-adjacent normalizer. A normalize_inventory_snapshot with TTL > 60s will serve stale stock data the instant any reserve_item_for_customer runs. Set Tier 3 writes' invalidates_cache_csv correctly OR keep the TTL very short.
+
+Tier 5 simulator forgets to set cache_scope='session'. Result: simulation output lands in the tenant cache and bleeds into the next non-simulation analytics call. cache_scope='session' isolates the overlay to the session_id.
+
+Python body raises out of run(). The kitchen sandbox reports 'sandbox_error' with no context. Wrap every IO call in try/except; return the standard error envelopes (MISSING_INPUT, VALIDATION_ERROR, AUTH_FAILED, UNKNOWN_ERROR) instead.
+
+Forgetting cookbook_recipe_dependency rows. The recipe still runs, but the admin GUI's dependency graph (PR-2) cannot render the lineage and the future auto-invalidation traversal cannot follow the chain.
+
+Testing your recipe
+
+Three checks before opening a PR:
+
+1. Apply the SQL clean: psql -1 ensures the file rolls back fully on any error. Apply against a fresh hyve_kitchen_test DB.
+
+2. Manifest shows it: SELECT name, tier, cache_scope, cdm_output_type FROM cookbook_recipe WHERE name='your_recipe';
+
+3. Invoke via /v1/cook: build a curl with the right vars; for Tier 4+ that depends on cached normalizer data, first hit /v1/cook for the upstream normalizer so the cache is warm.
+
+If you need to inspect cache state, use:
+
+docker exec -it hyve-redis redis-cli KEYS 'norm:*'
+
+docker exec -it hyve-redis redis-cli GET 'norm:customer_profile:abc123...'
+
+This guide ships alongside hyve_phase2_brainstorm_v2.docx. The brainstorm explains the architecture; this guide is the day-to-day reference for getting a recipe from blank file to merged PR. Questions: ping Jason on #hyve-engineering.
+
+Document prepared by Jason for Tyler & Allan. June 2026. Companion to: hyve_phase2_brainstorm_v2.docx (Tyler/AIS, June 2026).
