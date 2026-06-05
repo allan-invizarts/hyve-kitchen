@@ -1,0 +1,22 @@
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    container_name: pg_test_db
+    environment:
+      POSTGRES_USER: ${KITCHEN_PG_USER:-test_user}
+      POSTGRES_PASSWORD: ${KITCHEN_PG_PASSWORD:-test_password}
+      POSTGRES_DB: ${KITCHEN_PG_DB:-test_db}
+      WIPE_DATA: ${KITCHEN_PG_WIPE_DATA:-true}
+      PGDATA: /var/lib/postgresql/data/pgdata_${KITCHEN_PG_WIPE_DATA:-true}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - pg_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KITCHEN_PG_USER:-test_user} -d ${KITCHEN_PG_DB:-test_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_test_data:

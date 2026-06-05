@@ -1,0 +1,9 @@
+name: GapReport
+description: Inventory stockout risk report (gaps[] items follow GapReportItem)
+fields:
+  - name: as_of
+    type: string
+    required: true
+  - name: gaps
+    type: list
+    required: true

@@ -1,52 +1,19 @@
-# Odoo Get/Set Lead Recipe — Quick Start
-
-This document explains how to test the `odoo_getset_lead` recipe locally.
-
-Prereqs
-- Docker + docker-compose (to run Postgres and Odoo locally)
-- Python 3.10+ available for the test runner
-
-Files added
-- `recipes/odoo_getset_lead.py` — recipe implementation (callable `run(vars)`)
-- `samples/odoo_getset_lead_insert.sql` — idempotent SQL to seed `cookbook_*` rows
-- `tests/run_odoo_getset_lead.py` — simple local test runner
-
-Run the DB & Odoo (example; adapt to your compose filenames):
+# Local deploy
 
 ```bash
-# Start Odoo (if using the provided docker-compose)
-docker compose -f "docker-compose (1).yml" up -d
-
-# Start Postgres (pgvector image) if separate
-docker compose -f docker-compose.yml up -d
+cp .env.example .env
+./scripts/deploy_local.sh --init-pg   # kitchen PG + schema + Odoo
+./scripts/deploy_local.sh --skip-pg   # Odoo only
 ```
 
-Apply migrations and sample insert (adjust container name / paths):
+## Databases
 
-```bash
-# Example: apply migrations if you have the migration files in migrations/
-docker exec -i hyve-postgres psql -1 -U hyve_admin -d hyve_llm < migrations/001_kitchen_schema.sql
-docker exec -i hyve-postgres psql -1 -U hyve_admin -d hyve_llm < migrations/002_kitchen_async_jobs.sql
-docker exec -i hyve-postgres psql -1 -U hyve_admin -d hyve_llm < migrations/003_cookbook_evolution.sql
-docker exec -i hyve-postgres psql -1 -U hyve_admin -d hyve_llm < migrations/004_kitchen_extras.sql
+| Stack | What spins up | You use |
+|-------|----------------|---------|
+| Kitchen (`docker-compose-pg.yml`) | `KITCHEN_PG_DB` (default `test_db`) | Cookbook SQL, tier4 samples. Run `--init-pg` to apply `001`–`004` migrations. |
+| Odoo (`docker-compose-odoo.yml` `db`) | Postgres role `ODOO_DB_USER`; server DB `postgres` | Internal only — Odoo manages this. |
+| Odoo app | Not auto-created | Open Odoo UI, create DB named `ODOO_DB` (default `hyve_kitchen`). |
 
-# Apply the sample recipe insert (path in container must match where you copy it)
-docker cp samples/odoo_getset_lead_insert.sql hyve-postgres:/tmp/
-docker exec -i hyve-postgres psql -1 -U hyve_admin -d hyve_llm -f /tmp/odoo_getset_lead_insert.sql
-```
+Kitchen and Odoo Postgres are separate. `ODOO_DB_*` is Odoo’s DB server creds. `KITCHEN_PG_*` is the pgvector dev DB on your host port.
 
-Local test runner
-
-Edit `tests/run_odoo_getset_lead.py` to add your local `odoo_password` (keep it secret).
-Then run:
-
-```bash
-python -m tests.run_odoo_getset_lead
-```
-
-The test runner calls `run(vars)` and prints the returned envelope.
-
-Security
-- Do not check in passwords or API keys. Use local env vars or an external secrets manager.
-
-If you'd like, I can adapt the SQL insert to put the full rendered `python_body` into `cookbook_recipe.python_body` instead of relying on a template row.
+If you change `ODOO_HOST_PORT`, set `ODOO_BASE_URL` to match.

@@ -1,0 +1,27 @@
+name: CommonInteractionEvent
+description: Customer interaction event
+fields:
+  - name: event_id
+    type: string
+    required: true
+  - name: customer_id
+    type: string
+    required: false
+  - name: timestamp
+    type: string
+    required: true
+  - name: channel
+    type: string
+    required: false
+  - name: event_type
+    type: string
+    required: false
+  - name: notes
+    type: string
+    required: false
+  - name: session_id
+    type: string
+    required: false
+  - name: source_system
+    type: string
+    required: false

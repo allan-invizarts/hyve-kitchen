@@ -1,0 +1,59 @@
+[
+  {
+    "transaction_id": "odoo:so:1001",
+    "source_system": "odoo",
+    "source_id": "1001",
+    "customer_id": "odoo:lead:42",
+    "date": "2026-05-20T10:00:00Z",
+    "total_amount": 120.5,
+    "currency": "USD",
+    "status": "paid",
+    "channel": "pos",
+    "items": [
+      {"product_id": "PROD-A", "product_name": "Widget A", "qty": 2, "unit_price": 25.0},
+      {"product_id": "PROD-B", "product_name": "Widget B", "qty": 1, "unit_price": 70.5}
+    ]
+  },
+  {
+    "transaction_id": "odoo:so:1002",
+    "source_system": "odoo",
+    "source_id": "1002",
+    "customer_id": "odoo:lead:42",
+    "date": "2026-04-10T14:30:00Z",
+    "total_amount": 85.0,
+    "currency": "USD",
+    "status": "paid",
+    "channel": "online",
+    "items": [
+      {"product_id": "PROD-A", "product_name": "Widget A", "qty": 3, "unit_price": 28.33}
+    ]
+  },
+  {
+    "transaction_id": "odoo:so:903",
+    "source_system": "odoo",
+    "source_id": "903",
+    "customer_id": "odoo:lead:42",
+    "date": "2026-02-01T09:00:00Z",
+    "total_amount": 200.0,
+    "currency": "USD",
+    "status": "paid",
+    "channel": "sales_order",
+    "items": [
+      {"product_id": "PROD-C", "product_name": "Widget C", "qty": 4, "unit_price": 50.0}
+    ]
+  },
+  {
+    "transaction_id": "odoo:so:802",
+    "source_system": "odoo",
+    "source_id": "802",
+    "customer_id": "odoo:lead:42",
+    "date": "2025-12-15T11:00:00Z",
+    "total_amount": 150.0,
+    "currency": "USD",
+    "status": "paid",
+    "channel": "pos",
+    "items": [
+      {"product_id": "PROD-A", "product_name": "Widget A", "qty": 5, "unit_price": 30.0}
+    ]
+  }
+]

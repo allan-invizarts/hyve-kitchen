@@ -1,0 +1,32 @@
+[
+  {
+    "session_id": "sess-001",
+    "customer_id": "odoo:lead:42",
+    "started_at": "2026-06-04T08:00:00Z",
+    "ended_at": "2026-06-04T08:12:00Z",
+    "outcome": "purchase",
+    "intent": "reorder",
+    "converted": true,
+    "duration_seconds": 720
+  },
+  {
+    "session_id": "sess-002",
+    "customer_id": null,
+    "started_at": "2026-06-04T09:00:00Z",
+    "ended_at": "2026-06-04T09:05:00Z",
+    "outcome": "browse",
+    "intent": "product_lookup",
+    "converted": false,
+    "duration_seconds": 300
+  },
+  {
+    "session_id": "sess-003",
+    "customer_id": "odoo:lead:99",
+    "started_at": "2026-06-04T10:00:00Z",
+    "ended_at": "2026-06-04T10:20:00Z",
+    "outcome": "quote",
+    "intent": "inventory_check",
+    "converted": true,
+    "duration_seconds": 1200
+  }
+]

@@ -1,0 +1,15 @@
+name: LineItem
+description: Line item nested in CommonTransaction
+fields:
+  - name: product_id
+    type: string
+    required: true
+  - name: product_name
+    type: string
+    required: false
+  - name: qty
+    type: float
+    required: true
+  - name: unit_price
+    type: float
+    required: false

@@ -1,0 +1,30 @@
+{
+  "analyze_spend_trend": {
+    "inputs": {"CommonTransaction": "transactions"}
+  },
+  "analyze_inventory_gaps": {
+    "inputs": {
+      "CommonTransaction": "transactions",
+      "CommonInventorySnapshot": "inventory_snapshots"
+    }
+  },
+  "analyze_churn_signals": {
+    "inputs": {
+      "CommonCustomerProfile": "customer_profile",
+      "CommonTransaction": "transactions",
+      "CommonServiceTicket": "service_tickets"
+    }
+  },
+  "analyze_customer_ltv": {
+    "inputs": {
+      "CommonTransaction": "transactions",
+      "CommonLoyaltyStatus": "loyalty_status"
+    }
+  },
+  "analyze_customer_segment": {
+    "inputs": {"CommonTransaction": "transactions"}
+  },
+  "analyze_store_session_metrics": {
+    "inputs": {"CommonKioskSession": "kiosk_sessions"}
+  }
+}

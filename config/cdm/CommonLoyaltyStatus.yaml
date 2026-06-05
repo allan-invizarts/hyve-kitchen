@@ -1,0 +1,21 @@
+name: CommonLoyaltyStatus
+description: Loyalty program state for a customer
+fields:
+  - name: customer_id
+    type: string
+    required: true
+  - name: tier
+    type: string
+    required: false
+  - name: points_balance
+    type: int
+    required: false
+  - name: lifetime_points
+    type: int
+    required: false
+  - name: available_rewards
+    type: list
+    required: false
+  - name: source_system
+    type: string
+    required: false

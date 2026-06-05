@@ -1,0 +1,15 @@
+name: SegmentProfile
+description: Cohort-style segment summary from transactions
+fields:
+  - name: segment_label
+    type: string
+    required: true
+  - name: avg_order_value
+    type: float
+    required: true
+  - name: top_products
+    type: list
+    required: true
+  - name: order_count
+    type: int
+    required: true

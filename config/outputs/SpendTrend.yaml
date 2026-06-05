@@ -1,0 +1,21 @@
+name: SpendTrend
+description: Tier 4 spend aggregation over transactions
+fields:
+  - name: period
+    type: string
+    required: true
+  - name: buckets
+    type: list
+    required: true
+  - name: total_current
+    type: float
+    required: true
+  - name: total_prior
+    type: float
+    required: true
+  - name: delta_pct
+    type: float
+    required: true
+  - name: trend
+    type: string
+    required: true

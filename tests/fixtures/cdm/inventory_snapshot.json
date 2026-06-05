@@ -1,0 +1,32 @@
+[
+  {
+    "product_id": "PROD-A",
+    "source_system": "odoo",
+    "location_name": "Main Warehouse",
+    "qty_available": 12.0,
+    "qty_reserved": 2.0,
+    "qty_on_order": 50.0,
+    "reorder_point": 20.0,
+    "as_of": "2026-06-04T12:00:00Z"
+  },
+  {
+    "product_id": "PROD-B",
+    "source_system": "odoo",
+    "location_name": "Main Warehouse",
+    "qty_available": 3.0,
+    "qty_reserved": 0.0,
+    "qty_on_order": 10.0,
+    "reorder_point": 5.0,
+    "as_of": "2026-06-04T12:00:00Z"
+  },
+  {
+    "product_id": "PROD-C",
+    "source_system": "odoo",
+    "location_name": "Main Warehouse",
+    "qty_available": 80.0,
+    "qty_reserved": 5.0,
+    "qty_on_order": 0.0,
+    "reorder_point": 15.0,
+    "as_of": "2026-06-04T12:00:00Z"
+  }
+]

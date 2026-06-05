@@ -1,0 +1,15 @@
+name: SessionMetrics
+description: Store-level kiosk session metrics
+fields:
+  - name: session_count
+    type: int
+    required: true
+  - name: conversion_rate
+    type: float
+    required: true
+  - name: top_intents
+    type: list
+    required: true
+  - name: avg_duration_seconds
+    type: float
+    required: false

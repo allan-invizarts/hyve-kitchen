@@ -1,0 +1,27 @@
+name: CommonInventorySnapshot
+description: Per-product inventory state at a point in time
+fields:
+  - name: product_id
+    type: string
+    required: true
+  - name: source_system
+    type: string
+    required: false
+  - name: location_name
+    type: string
+    required: false
+  - name: qty_available
+    type: float
+    required: true
+  - name: qty_reserved
+    type: float
+    required: false
+  - name: qty_on_order
+    type: float
+    required: false
+  - name: reorder_point
+    type: float
+    required: false
+  - name: as_of
+    type: string
+    required: false

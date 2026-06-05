@@ -1,0 +1,12 @@
+name: ChurnScore
+description: Customer churn risk score with machine-readable factors
+fields:
+  - name: score
+    type: int
+    required: true
+  - name: risk_level
+    type: string
+    required: true
+  - name: risk_factors
+    type: list
+    required: true

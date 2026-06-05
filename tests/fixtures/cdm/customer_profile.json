@@ -1,0 +1,14 @@
+{
+  "customer_id": "odoo:lead:42",
+  "source_system": "odoo",
+  "source_id": "42",
+  "name": "Ana Lopez",
+  "email": "ana.lopez@example.com",
+  "phone": "+1-808-555-1234",
+  "face_hash": "FH-ABC-123",
+  "tags": ["vip", "repeat_customer"],
+  "loyalty_tier": "gold",
+  "loyalty_points": 1240,
+  "created_at": "2025-11-01T13:20:00Z",
+  "last_seen_at": "2026-05-15T09:12:00Z"
+}

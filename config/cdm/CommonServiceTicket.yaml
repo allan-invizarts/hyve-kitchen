@@ -1,0 +1,27 @@
+name: CommonServiceTicket
+description: Helpdesk or service ticket
+fields:
+  - name: ticket_id
+    type: string
+    required: true
+  - name: customer_id
+    type: string
+    required: false
+  - name: subject
+    type: string
+    required: false
+  - name: status
+    type: string
+    required: true
+  - name: priority
+    type: string
+    required: false
+  - name: created_at
+    type: string
+    required: false
+  - name: resolved_at
+    type: string
+    required: false
+  - name: source_system
+    type: string
+    required: false

@@ -1,0 +1,24 @@
+{
+  "analyze_spend_trend": {
+    "transactions": "transactions_90d.json"
+  },
+  "analyze_inventory_gaps": {
+    "transactions": "transactions_90d.json",
+    "inventory_snapshots": "inventory_snapshot.json"
+  },
+  "analyze_churn_signals": {
+    "customer_profile": "customer_profile.json",
+    "transactions": "transactions_90d.json",
+    "service_tickets": "service_tickets.json"
+  },
+  "analyze_customer_ltv": {
+    "transactions": "transactions_90d.json",
+    "loyalty_status": "loyalty_status.json"
+  },
+  "analyze_customer_segment": {
+    "transactions": "transactions_90d.json"
+  },
+  "analyze_store_session_metrics": {
+    "kiosk_sessions": "kiosk_sessions.json"
+  }
+}

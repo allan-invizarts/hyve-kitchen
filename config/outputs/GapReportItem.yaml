@@ -1,0 +1,21 @@
+name: GapReportItem
+description: One product row inside GapReport.gaps
+fields:
+  - name: product_id
+    type: string
+    required: true
+  - name: location_name
+    type: string
+    required: false
+  - name: qty_available
+    type: float
+    required: true
+  - name: sales_velocity_per_day
+    type: float
+    required: true
+  - name: days_to_stockout
+    type: float
+    required: false
+  - name: severity
+    type: string
+    required: true

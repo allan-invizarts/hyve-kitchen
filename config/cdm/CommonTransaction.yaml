@@ -1,0 +1,33 @@
+name: CommonTransaction
+description: Unified order or POS transaction
+fields:
+  - name: transaction_id
+    type: string
+    required: true
+  - name: source_system
+    type: string
+    required: true
+  - name: source_id
+    type: string
+    required: false
+  - name: customer_id
+    type: string
+    required: false
+  - name: date
+    type: string
+    required: true
+  - name: total_amount
+    type: float
+    required: true
+  - name: currency
+    type: string
+    required: false
+  - name: status
+    type: string
+    required: false
+  - name: channel
+    type: string
+    required: false
+  - name: items
+    type: list
+    required: false

@@ -1,0 +1,8 @@
+{
+  "customer_id": "odoo:lead:42",
+  "tier": "gold",
+  "points_balance": 1240,
+  "lifetime_points": 8500,
+  "available_rewards": ["free_shipping", "10pct_off"],
+  "source_system": "odoo"
+}

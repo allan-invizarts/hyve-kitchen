@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "types": {
+    "LineItem": {"path": "cdm/LineItem.yaml", "cardinality": "object", "tier_producer": "nested"},
+    "CommonCustomerProfile": {"path": "cdm/CommonCustomerProfile.yaml", "cardinality": "object", "tier_producer": "tier3.5"},
+    "CommonTransaction": {"path": "cdm/CommonTransaction.yaml", "cardinality": "list", "tier_producer": "tier3.5"},
+    "CommonInventorySnapshot": {"path": "cdm/CommonInventorySnapshot.yaml", "cardinality": "list", "tier_producer": "tier3.5"},
+    "CommonInteractionEvent": {"path": "cdm/CommonInteractionEvent.yaml", "cardinality": "list", "tier_producer": "tier3.5"},
+    "CommonServiceTicket": {"path": "cdm/CommonServiceTicket.yaml", "cardinality": "list", "tier_producer": "tier3.5"},
+    "CommonLoyaltyStatus": {"path": "cdm/CommonLoyaltyStatus.yaml", "cardinality": "object", "tier_producer": "tier3.5"},
+    "CommonProduct": {"path": "cdm/CommonProduct.yaml", "cardinality": "list", "tier_producer": "tier3.5"},
+    "CommonKioskSession": {"path": "cdm/CommonKioskSession.yaml", "cardinality": "list", "tier_producer": "tier3.5"}
+  },
+  "outputs": {
+    "SpendTrend": {"path": "outputs/SpendTrend.yaml", "tier_producer": "tier4"},
+    "GapReport": {"path": "outputs/GapReport.yaml", "tier_producer": "tier4"},
+    "GapReportItem": {"path": "outputs/GapReportItem.yaml", "cardinality": "object", "tier_producer": "tier4"},
+    "ChurnScore": {"path": "outputs/ChurnScore.yaml", "tier_producer": "tier4"},
+    "LTVProjection": {"path": "outputs/LTVProjection.yaml", "tier_producer": "tier4"},
+    "SegmentProfile": {"path": "outputs/SegmentProfile.yaml", "tier_producer": "tier4"},
+    "SessionMetrics": {"path": "outputs/SessionMetrics.yaml", "tier_producer": "tier4"}
+  }
+}

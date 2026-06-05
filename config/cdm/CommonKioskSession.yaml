@@ -1,0 +1,27 @@
+name: CommonKioskSession
+description: Aggregated kiosk session record
+fields:
+  - name: session_id
+    type: string
+    required: true
+  - name: customer_id
+    type: string
+    required: false
+  - name: started_at
+    type: string
+    required: true
+  - name: ended_at
+    type: string
+    required: false
+  - name: outcome
+    type: string
+    required: false
+  - name: intent
+    type: string
+    required: false
+  - name: converted
+    type: bool
+    required: false
+  - name: duration_seconds
+    type: int
+    required: false

@@ -1,2 +1,4 @@
-# No runtime pip dependencies required; uses Python standard library urllib/json.
-# If you prefer requests, add: requests
+# Tier 4 CDM config loading (optional; stdlib fallback parser included)
+pyyaml>=6.0; python_version >= "3.10"
+
+# Recipe runtime (Odoo samples) uses stdlib urllib/json only.
