@@ -57,6 +57,8 @@ def _fetch_from_odoo(config: dict) -> list:
     rpc_url = f"{base_url}/jsonrpc"
     
     # Search quant records
+    # Note: User requires 'Inventory/User' group to access stock.quant.
+    # If access denied, falls back to sample mode.
     search_payload = {
         "jsonrpc": "2.0",
         "method": "call",
@@ -70,8 +72,11 @@ def _fetch_from_odoo(config: dict) -> list:
                 "stock.quant",
                 "search_read",
                 [],
-                ["product_id", "location_id", "quantity", "reserved_quantity", "in_date"]
-            ]
+            ],
+            "kwargs": {
+                "fields": ["product_id", "location_id", "quantity", "reserved_quantity", "in_date"],
+                "limit": 100
+            }
         },
         "id": 1
     }
