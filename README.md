@@ -312,6 +312,51 @@ cdm_output_type = 'CustomerProfileSummary'   -- output type
 cdm_input_types_csv = 'CommonCustomerProfile'  -- consumes this CDM
 ```
 
+### Tier 5 fields (predict_customer_ltv)
+```sql
+tier = 'tier5'
+cache_scope = 'session'
+cdm_output_type = 'CustomerLTVProjection'
+cdm_input_types_csv = 'CustomerProfileSummary,CommonTransaction'
+```
+
+Tier 5 recipes are session-scoped predictive or simulation recipes. They consume analytics output from Tier 4 plus normalized transaction or inventory data, and they do not write back to the source system.
+
+To verify the Tier 5 prediction logic, run:
+
+```bash
+python tests/test_tier5_predict_customer_ltv.py
+```
+
+---
+
+## Inventory Module (Tier 3 → 4 → 5 Chain)
+
+A complete example inventory analysis and simulation chain:
+
+### Tier 3: odoo_get_inventory
+Fetches raw inventory from Odoo stock module (sample-mode stub available).
+
+### Tier 3.5: normalize_inventory_snapshot  
+Transforms raw inventory into `CommonInventorySnapshot` CDM with qty_available, qty_reserved, qty_on_order, reorder_point.
+
+### Tier 4: analyze_inventory_gaps
+Analyzes normalized inventory and identifies products below reorder point. Enables purchasing decisions.
+
+### Tier 5: simulate_inventory_change
+Applies hypothetical qty deltas to inventory in-memory (what-if analysis). Session-scoped; never writes to Odoo. Core of the June 13 demo.
+
+To run the end-to-end inventory simulation test:
+
+```bash
+python tests/test_tier5_simulate_inventory_change.py
+```
+
+This verifies:
+1. Normalizer loads sample inventory via Tier 3 getter
+2. Simulator applies a qty delta
+3. Analyzer detects gaps on the modified snapshot
+
 ---
 
 ## Running Tests
