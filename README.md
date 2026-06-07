@@ -138,21 +138,37 @@ hyve-kitchen/
 │
 ├── recipes/
 │   ├── odoo/
-│   │   └── crm/
-│   │       ├── odoo_crm_crud.py              # Tier 3 CRUD helper
-│   │       ├── odoo_crm_crud.sql             # Phase 2 recipe registration
-│   │       ├── analyze_customer_profile_summary.py    # Tier 4 analyzer
-│   │       └── analyze_customer_profile_summary.sql   # Phase 2 recipe registration
-│   │
+│   │   ├── crm/
+│   │   │   ├── odoo_crm_crud.py              # Tier 3 CRUD helper
+│   │   │   ├── odoo_crm_crud.sql             # Phase 2 recipe registration
+│   │   │   ├── analyze_customer_profile_summary.py    # Tier 4 analyzer
+│   │   │   ├── analyze_customer_profile_summary.sql   # Phase 2 recipe registration
+│   │   │   ├── predict_customer_ltv.py       # Tier 5 LTV prediction
+│   │   │   └── predict_customer_ltv.sql      # Phase 2 recipe registration
+│   │   └── inventory/
+│   │       ├── odoo_get_inventory.py         # Tier 3 inventory fetch
+│   │       ├── odoo_get_inventory.sql
+│   │       ├── odoo_inventory_crud.py        # Tier 3 inventory CRUD
+│   │       ├── odoo_inventory_crud.sql
+│   │       ├── analyze_inventory_gaps.py     # Tier 4 inventory analysis
+│   │       ├── analyze_inventory_gaps.sql
+│   │       ├── simulate_inventory_change.py  # Tier 5 inventory simulation
+│   │       └── simulate_inventory_change.sql
+│   
 │   └── _normalizers/
-│       └── CommonCustomerProfile/
-│           ├── normalize_customer_profile.py    # Tier 3.5 normalizer
-│           └── normalize_customer_profile.sql   # Phase 2 recipe registration
+│       ├── CommonCustomerProfile/
+│       │   ├── normalize_customer_profile.py    # Tier 3.5 normalizer
+│       │   └── normalize_customer_profile.sql   # Phase 2 recipe registration
+│       └── Inventory/
+│           ├── normalize_inventory_snapshot.py  # Tier 3.5 inventory CDM translator
+│           └── normalize_inventory_snapshot.sql
 │
 ├── tests/
 │   ├── run_odoo_crm_crud_and_normalize.py    # E2E test: create → normalize
 │   ├── run_odoo_crm_crud_update_delete.py    # CRUD operations test
 │   ├── test_tier4_chain.py                   # Tier 4 analyzer test
+│   ├── test_tier_e2e.py                      # Full Tier 3→5 sample pipeline
+│   ├── test_live_odoo_integration.py         # Live Odoo integration test
 │   └── cleanup_crm_test_leads.py             # Delete test data
 │
 └── samples/
@@ -204,7 +220,26 @@ Open a browser and visit:
 
 Log in with the Odoo credentials shown above.
 
-### 5. Run the main tests
+### 5. Live Odoo integration and tests
+
+Run the basic Tier 3/Tier 3.5 verification first:
+```bash
+python tests/run_odoo_crm_crud_and_normalize.py
+```
+
+Then run the full sample-mode pipeline:
+```bash
+python tests/test_tier_e2e.py
+```
+
+If your Odoo demo user has inventory permissions, run the live Odoo pipeline test:
+```bash
+python tests/test_live_odoo_integration.py
+```
+
+If the Tier 3 inventory getter hits Odoo ACL restrictions, it will fall back to sample inventory and continue the pipeline so the rest of the analytics still works.
+
+### 6. Run the main tests
 
 ```bash
 python tests/run_odoo_crm_crud_and_normalize.py
@@ -212,7 +247,7 @@ python tests/run_odoo_crm_crud_and_normalize.py
 
 This validates the Tier 3 and Tier 3.5 flow.
 
-### 6. Run the Tier 4 analyzer test
+### 7. Run the Tier 4 analyzer test
 
 ```bash
 python tests/test_tier4_chain.py --mode sample
@@ -224,7 +259,7 @@ If Odoo is available and recipe modules are importable, run the full chain:
 python tests/test_tier4_chain.py --mode chain
 ```
 
-### 7. Clean up test data
+### 8. Clean up test data
 
 ```bash
 python tests/cleanup_crm_test_leads.py
